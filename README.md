@@ -1,4 +1,4 @@
-# SWAPI MCP Server
+# SWAPI MCP Server (For Ai Upskill training)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that exposes a subset of the
 [SWAPI — The Star Wars API](https://swapi.dev/) as MCP tools, so an AI agent can answer questions
