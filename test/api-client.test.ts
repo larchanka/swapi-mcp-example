@@ -130,4 +130,82 @@ describe("SwapiClient", () => {
 
     expect(film?.title).toBe("A New Hope");
   });
+
+  it("fetches resource with numeric id and applies search query parameters", async () => {
+    const calls = stubFetch(() => jsonResponse(paginated([personOne])));
+
+    const client = new SwapiClient(config);
+    const result = await client.searchPeople("Luke", 2);
+
+    expect(result.results).toEqual([personOne]);
+    expect(calls[0]?.href).toBe(
+      "https://swapi.dev/api/people/?format=json&search=Luke&page=2",
+    );
+  });
+
+  it("fetches planet, starship, vehicle, and species by id or url", async () => {
+    const calls = stubFetch((url) => {
+      if (url.pathname.includes("/planets/")) return jsonResponse({ name: "Tatooine" });
+      if (url.pathname.includes("/starships/")) return jsonResponse({ name: "Millennium Falcon" });
+      if (url.pathname.includes("/vehicles/")) return jsonResponse({ name: "Sand Crawler" });
+      if (url.pathname.includes("/species/")) return jsonResponse({ name: "Wookie" });
+      return jsonResponse({ detail: "Not found" }, 404);
+    });
+
+    const client = new SwapiClient(config);
+    const planet = await client.getPlanet(1);
+    const starship = await client.getStarship("https://swapi.dev/api/starships/10/");
+    const vehicle = await client.getVehicle(4);
+    const species = await client.getSpecies(3);
+
+    expect(planet.name).toBe("Tatooine");
+    expect(starship.name).toBe("Millennium Falcon");
+    expect(vehicle.name).toBe("Sand Crawler");
+    expect(species.name).toBe("Wookie");
+    expect(calls.length).toBe(4);
+  });
+
+  it("propagates ApiError when searchPeople encounters an HTTP error", async () => {
+    stubFetch(() => jsonResponse({ detail: "Server error" }, 500));
+
+    const client = new SwapiClient(config);
+    await expect(client.searchPeople("Luke")).rejects.toMatchObject({
+      status: 500,
+      message: expect.stringContaining("HTTP 500"),
+    });
+  });
+
+  it("rejects URLs pointing to arbitrary external hosts (SSRF protection)", async () => {
+    stubFetch(() => jsonResponse({}));
+
+    const client = new SwapiClient(config);
+    await expect(
+      client.getPerson("https://attacker.example/api/people/1/"),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("origin must match SWAPI base URL"),
+    });
+  });
+
+  it("rejects URLs with mismatched resource path prefixes", async () => {
+    stubFetch(() => jsonResponse({}));
+
+    const client = new SwapiClient(config);
+    await expect(
+      client.getPerson("https://swapi.dev/api/planets/1/"),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("path must start with /api/people/"),
+    });
+  });
+
+  it("rejects malformed or invalid IDs", async () => {
+    stubFetch(() => jsonResponse({}));
+
+    const client = new SwapiClient(config);
+    await expect(client.getPerson("invalid-id")).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("Invalid people id or URL"),
+    });
+  });
 });
