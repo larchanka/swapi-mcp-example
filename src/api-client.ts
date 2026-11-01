@@ -117,11 +117,20 @@ export class SwapiClient {
         throw new ApiError(400, `Invalid ${resource} URL: ${idOrUrl}`);
       }
 
-      const baseOrigin = new URL(this.baseUrl).origin;
-      if (parsed.origin !== baseOrigin) {
+      const baseUrlParsed = new URL(this.baseUrl);
+      if (parsed.origin !== baseUrlParsed.origin) {
         throw new ApiError(
           400,
-          `Invalid ${resource} URL: origin must match SWAPI base URL (${baseOrigin})`,
+          `Invalid ${resource} URL: origin must match SWAPI base URL (${baseUrlParsed.origin})`,
+        );
+      }
+
+      const basePath = baseUrlParsed.pathname.replace(/\/+$/, "");
+      const expectedPrefix = `${basePath}/${resource}/`;
+      if (!parsed.pathname.startsWith(expectedPrefix)) {
+        throw new ApiError(
+          400,
+          `Invalid ${resource} URL: path must start with ${expectedPrefix}`,
         );
       }
 

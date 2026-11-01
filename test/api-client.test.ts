@@ -183,7 +183,7 @@ describe("SwapiClient", () => {
       client.getPerson("https://swapi.dev/api/planets/1/"),
     ).rejects.toMatchObject({
       status: 400,
-      message: expect.stringContaining("Invalid people id or URL"),
+      message: expect.stringContaining("path must start with /api/people/"),
     });
 
     await expect(client.getPerson("invalid-id")).rejects.toMatchObject({
