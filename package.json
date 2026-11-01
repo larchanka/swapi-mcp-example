@@ -1,7 +1,7 @@
 {
   "name": "swapi-mcp",
   "version": "1.0.0",
-  "description": "MCP server (stdio) exposing SWAPI: list all film episodes and get characters of an episode",
+  "description": "MCP server (stdio) exposing SWAPI: films, characters, planets, starships, vehicles, and species",
   "type": "module",
   "main": "index.js",
   "license": "MIT",

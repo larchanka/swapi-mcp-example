@@ -130,4 +130,38 @@ describe("SwapiClient", () => {
 
     expect(film?.title).toBe("A New Hope");
   });
+
+  it("fetches resource with numeric id and applies search query parameters", async () => {
+    const calls = stubFetch(() => jsonResponse(paginated([personOne])));
+
+    const client = new SwapiClient(config);
+    const result = await client.searchPeople("Luke", 2);
+
+    expect(result.results).toEqual([personOne]);
+    expect(calls[0]?.href).toBe(
+      "https://swapi.dev/api/people/?format=json&search=Luke&page=2",
+    );
+  });
+
+  it("fetches planet, starship, vehicle, and species by id or url", async () => {
+    const calls = stubFetch((url) => {
+      if (url.pathname.includes("/planets/")) return jsonResponse({ name: "Tatooine" });
+      if (url.pathname.includes("/starships/")) return jsonResponse({ name: "Millennium Falcon" });
+      if (url.pathname.includes("/vehicles/")) return jsonResponse({ name: "Sand Crawler" });
+      if (url.pathname.includes("/species/")) return jsonResponse({ name: "Wookie" });
+      return jsonResponse({ detail: "Not found" }, 404);
+    });
+
+    const client = new SwapiClient(config);
+    const planet = await client.getPlanet(1);
+    const starship = await client.getStarship("https://swapi.dev/api/starships/10/");
+    const vehicle = await client.getVehicle(4);
+    const species = await client.getSpecies(3);
+
+    expect(planet.name).toBe("Tatooine");
+    expect(starship.name).toBe("Millennium Falcon");
+    expect(vehicle.name).toBe("Sand Crawler");
+    expect(species.name).toBe("Wookie");
+    expect(calls.length).toBe(4);
+  });
 });

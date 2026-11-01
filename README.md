@@ -1,19 +1,30 @@
 # SWAPI MCP Server
 
-A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that exposes a subset of the
+A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that exposes the
 [SWAPI — The Star Wars API](https://swapi.dev/) as MCP tools, so an AI agent can answer questions
-about Star Wars episodes and their characters without knowing anything about REST URLs.
+about Star Wars films, characters, planets, starships, vehicles, and species without knowing anything about REST URLs.
 
 Runs locally over **stdio transport** — no HTTP server of its own.
 
-## Scope: two tools
+## Exposed Tools
 
-Per requirements, the server exposes exactly two tools:
+The server exposes 13 tools across all SWAPI resources:
 
 | MCP tool | Source endpoints | Purpose |
 |---|---|---|
 | `list_films` | `GET /films/` | List all episodes (sorted, concise summaries) |
-| `get_film_characters` | `GET /films/{id}/` → `GET /people/{id}/` (for each link) | Get all characters of an episode, resolved to names and key attributes |
+| `get_film` | `GET /films/{id}/` | Get full film details (opening crawl, director, linked resources) |
+| `get_film_characters` | `GET /films/{id}/` → `GET /people/{id}/` | Get all characters of an episode, resolved to names and key attributes |
+| `get_person` | `GET /people/{id}/` | Get details of a character by id or URL |
+| `search_people` | `GET /people/?search=&page=` | Search characters by name or list characters with pagination |
+| `get_planet` | `GET /planets/{id}/` | Get details of a planet by id or URL |
+| `search_planets` | `GET /planets/?search=&page=` | Search planets by name or list planets with pagination |
+| `get_starship` | `GET /starships/{id}/` | Get details of a starship by id or URL |
+| `search_starships` | `GET /starships/?search=&page=` | Search starships by name/model or list starships with pagination |
+| `get_vehicle` | `GET /vehicles/{id}/` | Get details of a vehicle by id or URL |
+| `search_vehicles` | `GET /vehicles/?search=&page=` | Search vehicles by name/model or list vehicles with pagination |
+| `get_species` | `GET /species/{id}/` | Get details of a species by id or URL |
+| `search_species` | `GET /species/?search=&page=` | Search species by name or list species with pagination |
 
 SWAPI's `characters` field on a film contains only URLs, so `get_film_characters` follows those
 hypermedia links and resolves each character to `{ id, name, gender, birth_year, height, mass,
@@ -211,7 +222,14 @@ src/
   server.ts         McpServer factory + tool registration
   api-client.ts     SWAPI HTTP client (fetch, timeout, error mapping)
   config.ts         env parsing & validation
-  tools/films.ts    list_films, get_film_characters
+  tools/
+    common.ts       shared formatting & error handling
+    films.ts        list_films, get_film, get_film_characters
+    people.ts       get_person, search_people
+    planets.ts      get_planet, search_planets
+    species.ts      get_species, search_species
+    starships.ts    get_starship, search_starships
+    vehicles.ts     get_vehicle, search_vehicles
   types/swapi.ts    SWAPI response types + URL id parsing
 test/               vitest unit tests (fetch is stubbed)
 ```

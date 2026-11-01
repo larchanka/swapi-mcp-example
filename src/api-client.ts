@@ -1,5 +1,13 @@
 import type { Config } from "./config.js";
-import type { Film, Paginated, Person } from "./types/swapi.js";
+import type {
+  Film,
+  Paginated,
+  Person,
+  Planet,
+  Species,
+  Starship,
+  Vehicle,
+} from "./types/swapi.js";
 
 /** Error thrown for any failed SWAPI HTTP request (non-2xx, network failure, timeout). */
 export class ApiError extends Error {
@@ -35,8 +43,8 @@ export class SwapiClient {
     return page.results;
   }
 
-  async getFilm(filmId: number): Promise<Film> {
-    return this.request<Film>(`films/${filmId}/`);
+  async getFilm(filmIdOrUrl: number | string): Promise<Film> {
+    return this.getResource<Film>("films", filmIdOrUrl);
   }
 
   /** Finds a film by its episode number (1-6), since film resource ids do not match episode ids. */
@@ -45,14 +53,95 @@ export class SwapiClient {
     return films.find((film) => film.episode_id === episodeId);
   }
 
-  /** Fetches a person by their absolute SWAPI URL (as found in Film.characters). */
-  async getPerson(personUrl: string): Promise<Person> {
-    return this.request<Person>(personUrl);
+  /** Fetches a person by id or by their absolute SWAPI URL. */
+  async getPerson(idOrUrl: number | string): Promise<Person> {
+    return this.getResource<Person>("people", idOrUrl);
   }
 
-  private async request<T>(pathOrUrl: string): Promise<T> {
+  /** Searches people by name or returns paginated list of characters. */
+  async searchPeople(search?: string, page?: number): Promise<Paginated<Person>> {
+    return this.searchResource<Person>("people", search, page);
+  }
+
+  /** Fetches a planet by id or by its absolute SWAPI URL. */
+  async getPlanet(idOrUrl: number | string): Promise<Planet> {
+    return this.getResource<Planet>("planets", idOrUrl);
+  }
+
+  /** Searches planets by name or returns paginated list of planets. */
+  async searchPlanets(search?: string, page?: number): Promise<Paginated<Planet>> {
+    return this.searchResource<Planet>("planets", search, page);
+  }
+
+  /** Fetches a starship by id or by its absolute SWAPI URL. */
+  async getStarship(idOrUrl: number | string): Promise<Starship> {
+    return this.getResource<Starship>("starships", idOrUrl);
+  }
+
+  /** Searches starships by name or model, or returns paginated list of starships. */
+  async searchStarships(search?: string, page?: number): Promise<Paginated<Starship>> {
+    return this.searchResource<Starship>("starships", search, page);
+  }
+
+  /** Fetches a vehicle by id or by its absolute SWAPI URL. */
+  async getVehicle(idOrUrl: number | string): Promise<Vehicle> {
+    return this.getResource<Vehicle>("vehicles", idOrUrl);
+  }
+
+  /** Searches vehicles by name or model, or returns paginated list of vehicles. */
+  async searchVehicles(search?: string, page?: number): Promise<Paginated<Vehicle>> {
+    return this.searchResource<Vehicle>("vehicles", search, page);
+  }
+
+  /** Fetches a species by id or by its absolute SWAPI URL. */
+  async getSpecies(idOrUrl: number | string): Promise<Species> {
+    return this.getResource<Species>("species", idOrUrl);
+  }
+
+  /** Searches species by name or returns paginated list of species. */
+  async searchSpecies(search?: string, page?: number): Promise<Paginated<Species>> {
+    return this.searchResource<Species>("species", search, page);
+  }
+
+  /** Fetches a single resource by its numeric id or absolute URL. */
+  async getResource<T>(resource: string, idOrUrl: number | string): Promise<T> {
+    const raw = String(idOrUrl).trim();
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      return this.request<T>(raw);
+    }
+    const cleanId = raw.replace(/^\/+|\/+$/g, "");
+    return this.request<T>(`${resource}/${cleanId}/`);
+  }
+
+  /** Queries a resource collection with optional search and pagination parameters. */
+  async searchResource<T>(
+    resource: string,
+    search?: string,
+    page?: number,
+  ): Promise<Paginated<T>> {
+    const params: Record<string, string | number | undefined> = {};
+    if (search !== undefined && search.trim() !== "") {
+      params.search = search.trim();
+    }
+    if (page !== undefined) {
+      params.page = page;
+    }
+    return this.request<Paginated<T>>(`${resource}/`, params);
+  }
+
+  private async request<T>(
+    pathOrUrl: string,
+    params?: Record<string, string | number | undefined>,
+  ): Promise<T> {
     const url = new URL(pathOrUrl, this.baseUrl);
     url.searchParams.set("format", "json");
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== "") {
+          url.searchParams.set(key, String(value));
+        }
+      }
+    }
 
     let response: Response;
     try {
