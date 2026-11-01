@@ -1,5 +1,4 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { ApiError } from "../api-client.js";
 import { idFromUrl, type Paginated } from "../types/swapi.js";
@@ -11,20 +10,17 @@ export function jsonResult(data: unknown) {
 }
 
 /**
- * Maps errors to structured tool error results.
- * McpError instances are rethrown to let the SDK protocol layer handle them.
+ * API-level failures (HTTP errors, timeouts, network problems) are returned as a
+ * tool result with isError=true so the agent sees status and API message.
+ * Unexpected internal errors are rethrown and handled by the SDK.
  */
 export function toErrorResult(error: unknown) {
-  if (error instanceof McpError) {
+  if (!(error instanceof ApiError)) {
     throw error;
   }
-  const message =
-    error instanceof ApiError
-      ? error.message
-      : `Internal error: ${error instanceof Error ? error.message : String(error)}`;
   return {
     isError: true,
-    content: [{ type: "text" as const, text: message }],
+    content: [{ type: "text" as const, text: error.message }],
   };
 }
 
