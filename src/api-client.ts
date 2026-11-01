@@ -1,12 +1,13 @@
 import type { Config } from "./config.js";
-import type {
-  Film,
-  Paginated,
-  Person,
-  Planet,
-  Species,
-  Starship,
-  Vehicle,
+import {
+  idFromUrl,
+  type Film,
+  type Paginated,
+  type Person,
+  type Planet,
+  type Species,
+  type Starship,
+  type Vehicle,
 } from "./types/swapi.js";
 
 /** Error thrown for any failed SWAPI HTTP request (non-2xx, network failure, timeout). */
@@ -106,11 +107,38 @@ export class SwapiClient {
   /** Fetches a single resource by its numeric id or absolute URL. */
   async getResource<T>(resource: string, idOrUrl: number | string): Promise<T> {
     const raw = String(idOrUrl).trim();
+    let urlId: number | undefined;
+
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      return this.request<T>(raw);
+      let parsed: URL;
+      try {
+        parsed = new URL(raw);
+      } catch {
+        throw new ApiError(400, `Invalid ${resource} URL: ${idOrUrl}`);
+      }
+
+      const baseOrigin = new URL(this.baseUrl).origin;
+      if (parsed.origin !== baseOrigin) {
+        throw new ApiError(
+          400,
+          `Invalid ${resource} URL: origin must match SWAPI base URL (${baseOrigin})`,
+        );
+      }
+
+      urlId = idFromUrl(raw, resource);
+    } else {
+      const cleanId = raw.replace(/^\/+|\/+$/g, "");
+      const parsedNum = Number(cleanId);
+      if (cleanId !== "" && !Number.isNaN(parsedNum) && Number.isInteger(parsedNum) && parsedNum > 0) {
+        urlId = parsedNum;
+      }
     }
-    const cleanId = raw.replace(/^\/+|\/+$/g, "");
-    return this.request<T>(`${resource}/${cleanId}/`);
+
+    if (urlId === undefined) {
+      throw new ApiError(400, `Invalid ${resource} id or URL: ${idOrUrl}`);
+    }
+
+    return this.request<T>(`${resource}/${urlId}/`);
   }
 
   /** Queries a resource collection with optional search and pagination parameters. */
