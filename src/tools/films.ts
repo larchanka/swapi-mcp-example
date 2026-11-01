@@ -91,7 +91,9 @@ export function registerFilmTools(server: McpServer, client: SwapiClient): void 
       },
     },
     async ({ film_id: filmId, episode_id: episodeId }) => {
-      if ((filmId === undefined) === (episodeId === undefined)) {
+      const hasFilmId = filmId !== undefined;
+      const hasEpisodeId = episodeId !== undefined;
+      if ((hasFilmId && hasEpisodeId) || (!hasFilmId && !hasEpisodeId)) {
         throw new McpError(
           ErrorCode.InvalidParams,
           "Provide exactly one of 'film_id' or 'episode_id' to identify the episode.",
@@ -145,7 +147,9 @@ export function registerFilmTools(server: McpServer, client: SwapiClient): void 
       },
     },
     async ({ film_id: filmId, episode_id: episodeId }) => {
-      if ((filmId === undefined) === (episodeId === undefined)) {
+      const hasFilmId = filmId !== undefined;
+      const hasEpisodeId = episodeId !== undefined;
+      if ((hasFilmId && hasEpisodeId) || (!hasFilmId && !hasEpisodeId)) {
         throw new McpError(
           ErrorCode.InvalidParams,
           "Provide exactly one of 'film_id' or 'episode_id' to identify the episode.",

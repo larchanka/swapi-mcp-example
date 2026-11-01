@@ -127,8 +127,7 @@ export interface Paginated<T> {
  * Extracts the numeric resource id from a SWAPI hypermedia URL,
  * e.g. "https://swapi.dev/api/people/1/" -> 1 (resource "people").
  */
-export function idFromUrl(url: string, resource?: string): number | undefined {
-  const pattern = resource ? `/${resource}/(\\d+)/?$` : `/(\\d+)/?$`;
-  const match = url.match(new RegExp(pattern));
+export function idFromUrl(url: string, resource: string): number | undefined {
+  const match = url.match(new RegExp(`/${resource}/(\\d+)/?$`));
   return match?.[1] === undefined ? undefined : Number(match[1]);
 }

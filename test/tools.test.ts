@@ -199,6 +199,28 @@ describe("get_film tool", () => {
     expect(data.title).toBe("The Empire Strikes Back");
     expect(data.episode_id).toBe(5);
   });
+
+  it("rejects when neither or both film_id and episode_id are provided", async () => {
+    const client = await connectTestClient();
+    const neither = await callTool(client, "get_film", {});
+    expect(neither.isError).toBe(true);
+    expect(errorText(neither)).toContain("exactly one of 'film_id' or 'episode_id'");
+
+    const both = await callTool(client, "get_film", { film_id: 1, episode_id: 4 });
+    expect(both.isError).toBe(true);
+    expect(errorText(both)).toContain("exactly one of 'film_id' or 'episode_id'");
+  });
+
+  it("returns an error result for unknown film_id or episode_id", async () => {
+    const client = await connectTestClient();
+    const unknownFilm = await callTool(client, "get_film", { film_id: 999 });
+    expect(unknownFilm.isError).toBe(true);
+    expect(errorText(unknownFilm)).toContain("HTTP 404");
+
+    const unknownEpisode = await callTool(client, "get_film", { episode_id: 99 });
+    expect(unknownEpisode.isError).toBe(true);
+    expect(errorText(unknownEpisode)).toContain("Episode 99 was not found");
+  });
 });
 
 describe("get_film_characters tool", () => {
@@ -243,6 +265,33 @@ describe("get_film_characters tool", () => {
 
     expect(result.isError).toBe(true);
     expect(errorText(result)).toContain("exactly one of 'film_id' or 'episode_id'");
+  });
+
+  it("rejects when both film_id and episode_id are provided", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_film_characters", {
+      film_id: 1,
+      episode_id: 4,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(errorText(result)).toContain("exactly one of 'film_id' or 'episode_id'");
+  });
+
+  it("returns a clear error result for an unknown film id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_film_characters", { film_id: 999 });
+
+    expect(result.isError).toBe(true);
+    expect(errorText(result)).toContain("HTTP 404");
+  });
+
+  it("returns a clear error result for an unknown episode id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_film_characters", { episode_id: 9 });
+
+    expect(result.isError).toBe(true);
+    expect(errorText(result)).toContain("Episode 9 was not found");
   });
 });
 
