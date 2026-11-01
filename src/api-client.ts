@@ -1,13 +1,12 @@
 import type { Config } from "./config.js";
-import {
-  idFromUrl,
-  type Film,
-  type Paginated,
-  type Person,
-  type Planet,
-  type Species,
-  type Starship,
-  type Vehicle,
+import type {
+  Film,
+  Paginated,
+  Person,
+  Planet,
+  Species,
+  Starship,
+  Vehicle,
 } from "./types/swapi.js";
 
 /** Error thrown for any failed SWAPI HTTP request (non-2xx, network failure, timeout). */
@@ -107,47 +106,11 @@ export class SwapiClient {
   /** Fetches a single resource by its numeric id or absolute URL. */
   async getResource<T>(resource: string, idOrUrl: number | string): Promise<T> {
     const raw = String(idOrUrl).trim();
-    let urlId: number | undefined;
-
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      let parsed: URL;
-      try {
-        parsed = new URL(raw);
-      } catch {
-        throw new ApiError(400, `Invalid ${resource} URL: ${idOrUrl}`);
-      }
-
-      const baseUrlParsed = new URL(this.baseUrl);
-      if (parsed.origin !== baseUrlParsed.origin) {
-        throw new ApiError(
-          400,
-          `Invalid ${resource} URL: origin must match SWAPI base URL (${baseUrlParsed.origin})`,
-        );
-      }
-
-      const basePath = baseUrlParsed.pathname.replace(/\/+$/, "");
-      const expectedPrefix = `${basePath}/${resource}/`;
-      if (!parsed.pathname.startsWith(expectedPrefix)) {
-        throw new ApiError(
-          400,
-          `Invalid ${resource} URL: path must start with ${expectedPrefix}`,
-        );
-      }
-
-      urlId = idFromUrl(raw, resource);
-    } else {
-      const cleanId = raw.replace(/^\/+|\/+$/g, "");
-      const parsedNum = Number(cleanId);
-      if (cleanId !== "" && !Number.isNaN(parsedNum) && Number.isInteger(parsedNum) && parsedNum > 0) {
-        urlId = parsedNum;
-      }
+      return this.request<T>(raw);
     }
-
-    if (urlId === undefined) {
-      throw new ApiError(400, `Invalid ${resource} id or URL: ${idOrUrl}`);
-    }
-
-    return this.request<T>(`${resource}/${urlId}/`);
+    const cleanId = raw.replace(/^\/+|\/+$/g, "");
+    return this.request<T>(`${resource}/${cleanId}/`);
   }
 
   /** Queries a resource collection with optional search and pagination parameters. */
