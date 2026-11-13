@@ -10,6 +10,10 @@ import {
   paginated,
   personOne,
   personTwo,
+  planetOne,
+  speciesOne,
+  starshipOne,
+  vehicleOne,
 } from "./fixtures.js";
 
 /** Stubs global fetch with a tiny in-memory SWAPI router. */
@@ -24,11 +28,41 @@ function stubSwapiApi(): void {
       if (href === "https://swapi.dev/api/films/1/?format=json") {
         return jsonResponse(filmOne);
       }
+      if (href === "https://swapi.dev/api/films/2/?format=json") {
+        return jsonResponse(filmTwo);
+      }
       if (href === "https://swapi.dev/api/people/1/?format=json") {
         return jsonResponse(personOne);
       }
       if (href === "https://swapi.dev/api/people/2/?format=json") {
         return jsonResponse(personTwo);
+      }
+      if (href.startsWith("https://swapi.dev/api/people/?")) {
+        return jsonResponse(paginated([personOne, personTwo]));
+      }
+      if (href === "https://swapi.dev/api/planets/1/?format=json") {
+        return jsonResponse(planetOne);
+      }
+      if (href.startsWith("https://swapi.dev/api/planets/?")) {
+        return jsonResponse(paginated([planetOne]));
+      }
+      if (href === "https://swapi.dev/api/starships/10/?format=json") {
+        return jsonResponse(starshipOne);
+      }
+      if (href.startsWith("https://swapi.dev/api/starships/?")) {
+        return jsonResponse(paginated([starshipOne]));
+      }
+      if (href === "https://swapi.dev/api/vehicles/4/?format=json") {
+        return jsonResponse(vehicleOne);
+      }
+      if (href.startsWith("https://swapi.dev/api/vehicles/?")) {
+        return jsonResponse(paginated([vehicleOne]));
+      }
+      if (href === "https://swapi.dev/api/species/3/?format=json") {
+        return jsonResponse(speciesOne);
+      }
+      if (href.startsWith("https://swapi.dev/api/species/?")) {
+        return jsonResponse(paginated([speciesOne]));
       }
       return jsonResponse({ detail: "Not found" }, 404);
     }),
@@ -74,6 +108,33 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("server tool registration", () => {
+  it("registers all SWAPI tools", async () => {
+    const client = await connectTestClient();
+    const { tools } = await client.listTools();
+    const toolNames = tools.map((t) => t.name);
+
+    expect(toolNames).toEqual(
+      expect.arrayContaining([
+        "list_films",
+        "get_film",
+        "get_film_characters",
+        "get_person",
+        "search_people",
+        "get_planet",
+        "search_planets",
+        "get_starship",
+        "search_starships",
+        "get_vehicle",
+        "search_vehicles",
+        "get_species",
+        "search_species",
+      ]),
+    );
+    expect(toolNames.length).toBe(13);
+  });
+});
+
 describe("list_films tool", () => {
   it("lists all episodes sorted by episode number", async () => {
     const client = await connectTestClient();
@@ -104,14 +165,61 @@ describe("list_films tool", () => {
       character_count: 2,
     });
   });
+});
 
-  it("is registered with an object input schema", async () => {
+describe("get_film tool", () => {
+  it("returns full film details by film_id", async () => {
     const client = await connectTestClient();
-    const tools = await client.listTools();
-    const listFilms = tools.tools.find((tool) => tool.name === "list_films");
+    const result = await callTool(client, "get_film", { film_id: 1 });
 
-    expect(listFilms).toBeDefined();
-    expect(listFilms?.inputSchema).toMatchObject({ type: "object" });
+    const data = parseText(result) as {
+      film_id: number;
+      title: string;
+      episode_id: number;
+      opening_crawl: string;
+    };
+
+    expect(data.film_id).toBe(1);
+    expect(data.title).toBe("A New Hope");
+    expect(data.episode_id).toBe(4);
+    expect(data.opening_crawl).toContain("civil war");
+  });
+
+  it("returns full film details by episode_id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_film", { episode_id: 5 });
+
+    const data = parseText(result) as {
+      film_id: number;
+      title: string;
+      episode_id: number;
+    };
+
+    expect(data.film_id).toBe(2);
+    expect(data.title).toBe("The Empire Strikes Back");
+    expect(data.episode_id).toBe(5);
+  });
+
+  it("rejects when neither or both film_id and episode_id are provided", async () => {
+    const client = await connectTestClient();
+    const neither = await callTool(client, "get_film", {});
+    expect(neither.isError).toBe(true);
+    expect(errorText(neither)).toContain("exactly one of 'film_id' or 'episode_id'");
+
+    const both = await callTool(client, "get_film", { film_id: 1, episode_id: 4 });
+    expect(both.isError).toBe(true);
+    expect(errorText(both)).toContain("exactly one of 'film_id' or 'episode_id'");
+  });
+
+  it("returns an error result for unknown film_id or episode_id", async () => {
+    const client = await connectTestClient();
+    const unknownFilm = await callTool(client, "get_film", { film_id: 999 });
+    expect(unknownFilm.isError).toBe(true);
+    expect(errorText(unknownFilm)).toContain("HTTP 404");
+
+    const unknownEpisode = await callTool(client, "get_film", { episode_id: 99 });
+    expect(unknownEpisode.isError).toBe(true);
+    expect(errorText(unknownEpisode)).toContain("Episode 99 was not found");
   });
 });
 
@@ -184,5 +292,110 @@ describe("get_film_characters tool", () => {
 
     expect(result.isError).toBe(true);
     expect(errorText(result)).toContain("Episode 9 was not found");
+  });
+});
+
+describe("people tools", () => {
+  it("gets person by id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_person", { id: 1 });
+
+    const data = parseText(result) as { id: number; name: string; eye_color: string };
+    expect(data.id).toBe(1);
+    expect(data.name).toBe("Luke Skywalker");
+    expect(data.eye_color).toBe("Blue");
+  });
+
+  it("searches people", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "search_people", { search: "Luke" });
+
+    const data = parseText(result) as { count: number; results: Array<{ id: number; name: string }> };
+    expect(data.count).toBe(2);
+    expect(data.results[0]?.name).toBe("Luke Skywalker");
+    expect(data.results[0]?.id).toBe(1);
+  });
+});
+
+describe("planet tools", () => {
+  it("gets planet by id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_planet", { id: 1 });
+
+    const data = parseText(result) as { id: number; name: string; climate: string };
+    expect(data.id).toBe(1);
+    expect(data.name).toBe("Tatooine");
+    expect(data.climate).toBe("arid");
+  });
+
+  it("searches planets", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "search_planets", { search: "Tatooine" });
+
+    const data = parseText(result) as { count: number; results: Array<{ id: number; name: string }> };
+    expect(data.count).toBe(1);
+    expect(data.results[0]?.name).toBe("Tatooine");
+    expect(data.results[0]?.id).toBe(1);
+  });
+});
+
+describe("starship tools", () => {
+  it("gets starship by id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_starship", { id: 10 });
+
+    const data = parseText(result) as { id: number; name: string; model: string };
+    expect(data.id).toBe(10);
+    expect(data.name).toBe("Millennium Falcon");
+  });
+
+  it("searches starships", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "search_starships", { search: "Falcon" });
+
+    const data = parseText(result) as { count: number; results: Array<{ id: number; name: string }> };
+    expect(data.count).toBe(1);
+    expect(data.results[0]?.name).toBe("Millennium Falcon");
+  });
+});
+
+describe("vehicle tools", () => {
+  it("gets vehicle by id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_vehicle", { id: 4 });
+
+    const data = parseText(result) as { id: number; name: string; vehicle_class: string };
+    expect(data.id).toBe(4);
+    expect(data.name).toBe("Sand Crawler");
+  });
+
+  it("searches vehicles", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "search_vehicles", { search: "Crawler" });
+
+    const data = parseText(result) as { count: number; results: Array<{ id: number; name: string }> };
+    expect(data.count).toBe(1);
+    expect(data.results[0]?.name).toBe("Sand Crawler");
+  });
+});
+
+describe("species tools", () => {
+  it("gets species by id", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "get_species", { id: 3 });
+
+    const data = parseText(result) as { id: number; name: string; language: string };
+    expect(data.id).toBe(3);
+    expect(data.name).toBe("Wookie");
+    expect(data.language).toBe("Shyriiwook");
+  });
+
+  it("searches species", async () => {
+    const client = await connectTestClient();
+    const result = await callTool(client, "search_species", { search: "Wookie" });
+
+    const data = parseText(result) as { count: number; results: Array<{ id: number; name: string }> };
+    expect(data.count).toBe(1);
+    expect(data.results[0]?.name).toBe("Wookie");
   });
 });

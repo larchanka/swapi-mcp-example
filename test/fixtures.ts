@@ -1,4 +1,11 @@
-import type { Film, Person } from "../src/types/swapi.js";
+import type {
+  Film,
+  Person,
+  Planet,
+  Species,
+  Starship,
+  Vehicle,
+} from "../src/types/swapi.js";
 
 export function makeFilm(overrides: Partial<Film> = {}): Film {
   return {
@@ -45,6 +52,93 @@ export function makePerson(overrides: Partial<Person> = {}): Person {
   };
 }
 
+export function makePlanet(overrides: Partial<Planet> = {}): Planet {
+  return {
+    name: "Tatooine",
+    rotation_period: "23",
+    orbital_period: "304",
+    diameter: "10465",
+    climate: "arid",
+    gravity: "1 standard",
+    terrain: "desert",
+    surface_water: "1",
+    population: "200000",
+    residents: ["https://swapi.dev/api/people/1/"],
+    films: ["https://swapi.dev/api/films/1/"],
+    created: "2014-12-09T13:50:49.641000Z",
+    edited: "2014-12-20T20:58:18.411000Z",
+    url: "https://swapi.dev/api/planets/1/",
+    ...overrides,
+  };
+}
+
+export function makeStarship(overrides: Partial<Starship> = {}): Starship {
+  return {
+    name: "Millennium Falcon",
+    model: "YT-1300 light freighter",
+    manufacturer: "Corellian Engineering Corporation",
+    cost_in_credits: "100000",
+    length: "34.37",
+    max_atmosphering_speed: "1050",
+    crew: "4",
+    passengers: "6",
+    cargo_capacity: "100000",
+    consumables: "2 months",
+    hyperdrive_rating: "0.5",
+    MGLT: "75",
+    starship_class: "Light freighter",
+    pilots: ["https://swapi.dev/api/people/13/"],
+    films: ["https://swapi.dev/api/films/1/"],
+    created: "2014-12-10T16:59:45.094000Z",
+    edited: "2014-12-20T21:23:49.880000Z",
+    url: "https://swapi.dev/api/starships/10/",
+    ...overrides,
+  };
+}
+
+export function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
+  return {
+    name: "Sand Crawler",
+    model: "Digger Crawler",
+    manufacturer: "Corellia Mining Corporation",
+    cost_in_credits: "150000",
+    length: "36.8",
+    max_atmosphering_speed: "30",
+    crew: "46",
+    passengers: "30",
+    cargo_capacity: "50000",
+    consumables: "2 months",
+    vehicle_class: "wheeled",
+    pilots: [],
+    films: ["https://swapi.dev/api/films/1/"],
+    created: "2014-12-10T15:36:25.724000Z",
+    edited: "2014-12-20T21:30:21.661000Z",
+    url: "https://swapi.dev/api/vehicles/4/",
+    ...overrides,
+  };
+}
+
+export function makeSpecies(overrides: Partial<Species> = {}): Species {
+  return {
+    name: "Wookie",
+    classification: "mammal",
+    designation: "sentient",
+    average_height: "210",
+    skin_colors: "gray",
+    hair_colors: "black, brown",
+    eye_colors: "blue, green, yellow, brown, golden, red",
+    average_lifespan: "400",
+    homeworld: "https://swapi.dev/api/planets/14/",
+    language: "Shyriiwook",
+    people: ["https://swapi.dev/api/people/13/"],
+    films: ["https://swapi.dev/api/films/1/"],
+    created: "2014-12-10T16:44:31.486000Z",
+    edited: "2014-12-20T21:36:42.142000Z",
+    url: "https://swapi.dev/api/species/3/",
+    ...overrides,
+  };
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -52,7 +146,9 @@ export function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-export function paginated<T>(results: T[]): { count: number; next: null; previous: null; results: T[] } {
+export function paginated<T>(
+  results: T[],
+): { count: number; next: null; previous: null; results: T[] } {
   return { count: results.length, next: null, previous: null, results };
 }
 
@@ -78,3 +174,8 @@ export const personTwo = makePerson({
   mass: "75",
   url: "https://swapi.dev/api/people/2/",
 });
+
+export const planetOne = makePlanet();
+export const starshipOne = makeStarship();
+export const vehicleOne = makeVehicle();
+export const speciesOne = makeSpecies();
